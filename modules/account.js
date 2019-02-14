@@ -24,14 +24,12 @@ class AccountModel {
 
     /**
      * 查询Account的详情
-     * @param id AccountID
+     * @param obj 查询obj
      * @returns {Promise<Model>}
      */
-    static async getAccountDetail(id){
+    static async getAccountDetail(obj){
         return await Account.findOne({
-            where:{
-                id
-            }
+            where:obj
         });
     }
     /**

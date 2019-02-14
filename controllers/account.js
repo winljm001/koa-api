@@ -1,6 +1,7 @@
 const AccountModel = require("../modules/account");
 const jwt     = require('jsonwebtoken'); // 用于签发、解析`token`
-const {secret } = require('../config/jwt')
+const {secret,saltStr } = require('../config/base')
+const md5 = require('md5')
 class AccountController {
     /**
      * 创建账号
@@ -12,16 +13,26 @@ class AccountController {
         let req = ctx.request.body;
         if(req.account&&req.password&&req.accountType){
             try{
-                //创建账号模型
-                const ret = await AccountModel.createAccount(req);
-                //使用刚刚创建的文章ID查询文章详情，且返回账号详情信息
-                const data = await AccountModel.getAccountDetail(ret.id);
-
-                ctx.response.status = 200;
-                ctx.body = {
-                    code: 200,
-                    msg: '创建成功',
-                    data
+                let verifyData = await AccountModel.findAllAccount({account:req.account});
+                if(verifyData.length>0){
+                    ctx.response.status = 400;
+                    ctx.body = {
+                        code: 400,
+                        msg: '账户已存在'
+                    }
+                }else{
+                    req.password=md5(req.password+saltStr)
+                    //创建账号模型
+                    const ret = await AccountModel.createAccount(req);
+                    //使用刚刚创建的文章ID查询文章详情，且返回账号详情信息
+                    const data = await AccountModel.getAccountDetail(ret.id);
+    
+                    ctx.response.status = 200;
+                    ctx.body = {
+                        code: 200,
+                        msg: '创建成功',
+                        data
+                    }
                 }
             }catch(err){
                 ctx.response.status = 412;
@@ -149,30 +160,32 @@ class AccountController {
         let req = ctx.request.body;
         if(req.password&&req.account){
             try{
-                let data = await AccountModel.findAllAccount(
-                                           {
-                        account:req.account,
-                        password:req.password
-                    }
-                );
+                let data = await AccountModel.findAllAccount({account:req.account});
                 if(data.length>0){
-                    ctx.response.status = 200;
-                    ctx.body = {
-                        code: 200,
-                        msg: '查询成功',
-                        data:{
-                            token:getToken({ account: req.account, password: req.password }),
-                            info:data[0]
+                    if(md5(req.password+saltStr)!==data[0].password){
+                        ctx.response.status = 400;
+                        ctx.body = {
+                            code: 190010,
+                            msg: '账号认证失败，帐户或密码错误'
+                        }
+                    }else{
+                        ctx.response.status = 200;
+                        delete data[0]['password'];
+                        
+                        ctx.body = {
+                            code: 200,
+                            msg: '查询成功',
+                            data:{
+                                token:getToken({ account: req.account, password: req.password }),
+                                info:data[0]
+                            }
                         }
                     }
                 }else{
                     ctx.response.status = 400;
                     ctx.body = {
-                        code: 190010,
-                        msg: '账号认证失败，帐户或密码错误',
-                        data:{
-                            info:data[0]
-                        }
+                        code: 400,
+                        msg: '账号不存在'
                     }
                 }
             }catch(err){

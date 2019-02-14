@@ -6,7 +6,7 @@ const onerror = require('koa-onerror')
 const bodyparser = require('koa-bodyparser')
 const logger = require('koa-logger')
 /* jwt密钥 */
-const {secret } = require('./config/jwt')
+const {secret } = require('./config/base')
 const jwtKoa = require('koa-jwt')
 
 const index = require('./routes/index')
